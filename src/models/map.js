@@ -102,7 +102,7 @@ export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
 
         const newIndex = result.length;
 
-        const itemTier = Math.floor(parentNode.depth + 1 / 5);
+        const itemTier = Math.floor(parentNode.depth + 1 / 4);
         result.push({
             index: newIndex,
             monster: {

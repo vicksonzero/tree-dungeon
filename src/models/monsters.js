@@ -67,6 +67,20 @@ const monsterTables = [
   ],
   [ // 1
     {
+      weight: 4,
+      name: 'rat',
+    },
+    {
+      weight: 8,
+      name: 'crab',
+    },
+    {
+      weight: 3,
+      name: 'wolf',
+    },
+  ],
+  [ // 2
+    {
       weight: 2,
       name: 'rat',
     },
@@ -78,7 +92,7 @@ const monsterTables = [
       weight: 8,
       name: 'wolf',
     },
-  ]
+  ],
 ]
 
 

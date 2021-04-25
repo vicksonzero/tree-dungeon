@@ -47,6 +47,29 @@ const items = {
       }
     ]
   },
+  'sword': {
+    name: 'sword',
+    icon: '🗡',
+    uses: 50,
+    descriptions: 'A proper sword',
+    effects: [
+      {
+        type: 'dmg',
+        amount: 10,
+      },
+    ]
+  },
+  'hammer': {
+    name: 'hammer',
+    icon: '🔨',
+    uses: 1,
+    descriptions: 'Combines two random items into one',
+    effects: [
+      {
+        type: 'combine',
+      }
+    ]
+  },
 };
 
 
@@ -72,7 +95,12 @@ const lootTables = [
     {
       weight: 10,
       name: 'hamburger',
-      uses: 5,
+      uses: 7,
+    },
+    {
+      weight: 5,
+      name: 'dagger +1',
+      uses: 1000,
     },
     {
       weight: 4,
@@ -80,14 +108,31 @@ const lootTables = [
       uses: 1,
     },
     {
+      weight: 1,
+      name: 'hammer',
+      uses: 1,
+    },
+  ],
+  [ // 2
+    {
+      weight: 10,
+      name: 'hamburger',
+      uses: 7,
+    },
+    {
       weight: 5,
-      name: 'dagger',
+      name: 'dagger +1',
       uses: 1000,
     },
     {
+      weight: 4,
+      name: 'apple',
+      uses: 1,
+    },
+    {
       weight: 2,
-      name: 'dagger +1',
-      uses: 1000,
+      name: 'sword',
+      uses: 1,
     },
   ]
 ]
@@ -121,9 +166,9 @@ export function weightedGetItem(tier, rng) {
   }
 }
 
-export function doEffect(effectDef, me, them, fightLogs) {
+export function doEffect(effectDef, me, them, fightLogs, backpack) {
   console.log(`doEffect (${effectDef.type})`);
-  const result = { me, them, fightLogs };
+  const result = { me, them, fightLogs, backpack };
 
   switch (effectDef.type) {
     case 'dmg': {
@@ -148,7 +193,12 @@ export function doEffect(effectDef, me, them, fightLogs) {
       console.log(effectDef.message);
       result.fightLogs = [...fightLogs];
       result.fightLogs.push(<>It says <span style={{ color: 'orange' }}>{effectDef.message}</span></>);
-    }
+    } break;
+
+    case 'combine': {
+      result.backpack = [...backpack];
+      
+    } break;
 
     default:
       console.warn(`Unhandled effect ${effectDef.type}`);
