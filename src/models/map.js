@@ -1,7 +1,5 @@
 
 import * as seedrandom from 'seedrandom';
-import { getItem, weightedGetItem } from "./items"
-
 
 
 const manualMap = {

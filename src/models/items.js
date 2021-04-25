@@ -113,7 +113,7 @@ export function weightedGetItem(tier, rng) {
 
   const roll = rng() * totalWeight;
 
-  for (const { w, item, name } of weightedLootTable) {
+  for (const { w, item } of weightedLootTable) {
     if (roll < w) {
       console.log(`weightedGetItem: roll=${Math.floor(roll)}/${totalWeight}, item=${item.name}`);
       return { ...getItem(item.name), uses: item.uses };
@@ -147,13 +147,15 @@ export function doEffect(effectDef, me, them) {
     case 'echo': {
       console.log(effectDef.message);
     }
+
+    default:
+      console.warn(`Unhandled effect ${effectDef.type}`);
   }
 
   return result;
 }
 
 export function effectToString(effectDef) {
-
   switch (effectDef.type) {
     case 'dmg': {
       return `Deal ${effectDef.amount} damage`;
@@ -170,5 +172,8 @@ export function effectToString(effectDef) {
     case 'echo': {
       return `Say a message`;
     }
+
+    default:
+      console.warn(`Unknown effect type ${effectDef.type}`);
   }
 }

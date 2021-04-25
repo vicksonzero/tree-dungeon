@@ -1,6 +1,6 @@
 //@ts-check
 import * as React from "react"
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import './styles.css'
 import styles from './App.module.css';
 import { generateMap, map as initMap } from "./models/map"
@@ -25,6 +25,7 @@ const actionTypes = {
 const initialState = {
   // game
   map: initMap,
+  isCheat: false,
 
   // progress
   depth: 0,
@@ -47,30 +48,8 @@ const initialState = {
   backpack: [
     getItem('hamburger'),
     getItem('dagger'),
-    {
-      name: 'BF Sword',
-      icon: '🍗',
-      uses: 1000,
-      descriptions: 'The Cheat Sword.',
-      effects: [
-        {
-          type: 'dmg',
-          amount: 100000,
-        }
-      ]
-    },
-    {
-      name: 'Teddy bear',
-      icon: '🐻',
-      uses: 100000,
-      descriptions: 'For comfort. No other use.',
-      effects: [
-        {
-          type: 'echo',
-          message: 'Squeak!'
-        }
-      ]
-    },
+    null,
+    null,
   ],
 };
 
@@ -79,6 +58,7 @@ function gameStateReducer(state, action) {
   switch (state.phase) {
     case 'titleScreen': {
       if (action.type === actionTypes.START_GAME) {
+        const { isCheat, backpack } = state;
         const nextState = {
           ...state,
           roomID: 0,
@@ -89,9 +69,37 @@ function gameStateReducer(state, action) {
           player: {
             ...state.player,
             name: action.playerName,
-          }
+          },
+          backpack: [...backpack],
         };
         console.log(nextState.map);
+
+        if (isCheat) {
+          nextState.backpack[1] = {
+            name: 'BF Sword',
+            icon: '🍗',
+            uses: 1000,
+            descriptions: 'The Cheat Sword.',
+            effects: [
+              {
+                type: 'dmg',
+                amount: 100000,
+              }
+            ]
+          };
+          nextState.backpack[2] = {
+            name: 'Teddy bear',
+            icon: '🐻',
+            uses: 100000,
+            descriptions: 'For comfort. No other use.',
+            effects: [
+              {
+                type: 'echo',
+                message: 'Squeak!'
+              }
+            ]
+          };
+        }
         nextState.phase = 'roomStart';
         nextState.pauseFor = 1000;
         return nextState;
@@ -104,8 +112,7 @@ function gameStateReducer(state, action) {
     }
     case 'roomStart': {
       if (action.type === actionTypes.TICK) {
-        const { map, roomID } = state;
-        const room = map.nodes[roomID];
+        const { map } = state;
         const nextState = {
           ...state,
           pauseFor: 0,
@@ -132,8 +139,7 @@ function gameStateReducer(state, action) {
       return state;
     }
     case 'fight': {
-      const { turn, player, monster, backpack, map, roomID } = state;
-      const room = map.nodes[roomID];
+      const { turn, player, monster, backpack } = state;
       console.log(`gameStateReducer:fight turn=${turn}`);
       if (action.type === actionTypes.TICK) {
         if (!monster || monster.hp <= 0) {
@@ -339,7 +345,7 @@ function gameStateReducer(state, action) {
       return state;
     }
 
-    case 'discard': {
+    default: {
 
 
       return state;
@@ -350,19 +356,24 @@ function gameStateReducer(state, action) {
 
 function App() {
   console.log('Rerender');
-  const [playerName, setPlayerName] = useLocalStorage('player_name', 'Player');
-  const [gameSeed, setGameSeed] = useLocalStorage('game_seed', 'LD48');
-  const [gameDepth, setGameDepth] = useLocalStorage('game_depth', 10);
-  const [officialGame, setOfficialGame] = useLocalStorage('official_game', null);
+  const [playerName, setPlayerName] = useLocalStorage('dickson.md/player_name', 'Player');
+  const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/game_seed', 'LD48');
+  const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/game_depth', 10);
+  const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/official_game', null);
+  const [url, setUrl] = useLocalStorage('dickson.md/official_game_url', null);
+  const [isCheat] = useLocalStorage('dickson.md/dev_mode', false);
+
+  if (url === null) {
+    setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json');
+  }
 
   useEffect(() => {
     (async () => {
-      const url = 'https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json';
       const results = await (await fetch(url)).json();
       console.log('Official', results);
       setOfficialGame(results);
     })();
-  }, []);
+  }, [url]);
 
   const applyOfficialGame = () => {
     if (officialGame != null) {
@@ -371,7 +382,7 @@ function App() {
     }
   };
 
-  const [gameState, doGameAction] = React.useReducer(gameStateReducer, initialState);
+  const [gameState, doGameAction] = React.useReducer(gameStateReducer, { ...initialState, isCheat });
 
   const {
     depth,
@@ -393,8 +404,11 @@ function App() {
     if (pauseFor <= 0) return;
     const time = uniqID++;
     console.log(`Wait: ${pauseFor} ${time}`);
-    setTimeout(() => doGameAction({ type: actionTypes.TICK, time }), pauseFor);
+    const timer = setTimeout(() => {
+      doGameAction({ type: actionTypes.TICK, time })
+    }, pauseFor);
 
+    return () => clearTimeout(timer);
   });
 
   const room = map.nodes[roomID];
@@ -416,7 +430,7 @@ function App() {
                 <label> Depth: <input type="text" value={gameDepth} onChange={(event) => setGameDepth(event.target.value)} /></label>
               </p>
               <p>
-                Official seed: ["{officialGame.game_seed}", {officialGame.game_depth}] <br />
+                Official seed: {officialGame ? `["${officialGame.game_seed}", ${officialGame.game_depth}]` : 'Loading...'} <br />
                 <button onClick={() => applyOfficialGame()}>Use official seed</button>
               </p>
               <p>
@@ -438,12 +452,13 @@ function App() {
 
         const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         return (
-          <>
+          <div>
             <h1>Congratulations!</h1>
             <p>{msg}</p>
             <p>Seed: <code>{gameSeed}</code></p>
             <p>Your Journey: {historyStrList.join(' → ')} → {roomID} {monster.icon} ⭐</p>
-          </>
+
+          </div>
         );
       }
 
@@ -489,6 +504,14 @@ function App() {
             return 'nothing'
           }
         })();
+
+        const actionLabel = (() => {
+          if (keepBackpack.length <= 4) {
+            return `Proceed with ${keepBackpack.length} / 4 items`;
+          } else {
+            return `Backpack is too full (${keepBackpack.length} / 4)`;
+          }
+        })();
         return (
           <>
             <div>
@@ -496,75 +519,79 @@ function App() {
               <p>You have found {lootStr} in this room!</p>
               {keepBackpack.length <= 4 ? null : <p>You must drop items until you only have 4 on hand.</p>}
               <p>
-                <button onClick={() => doGameAction({ type: actionTypes.FINISH_DROP })}>Proceed ({keepBackpack.length} / 4)</button>
+                <button onClick={() => doGameAction({ type: actionTypes.FINISH_DROP })} disabled={keepBackpack.length > 4}>{actionLabel}</button>
               </p>
               <table style={{ borderCollapse: 'collapse' }}>
 
-                <tr className={styles.dropItemRow}>
-                  <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemIconCell}`}>
-                    Item
+                <thead>
+                  <tr className={styles.dropItemRow}>
+                    <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemIconCell}`}>
+                      Item
                     </td>
-                  <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemDescriptionCell}`}>
-                    Descriptions / Effects
+                    <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemDescriptionCell}`}>
+                      Descriptions / Effects
                     </td>
-                  <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemRowDropCell}`}>
-                    Keep?
-                    </td>
-                </tr>
-                {(() => {
-                  if (!loot) return null;
-                  const { name, icon, descriptions, effects, uses } = loot;
-                  const lootID = 4;
-                  const isKeeping = keepBackpack.includes(lootID);
-                  const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
-
-                  const usesStr = uses < 100 ? uses : '99+';
-                  return <tr className={`${styles.dropItemRow} ${styles.dropItemRowLoot} ${dropStyle}`}>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
-                      <span className={styles.itemButtonIcon}>{icon}</span><br />
-                      <span>{capitalize(name)} ({usesStr})</span><br />
-                      <span>(New item)</span>
-                    </td>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemDescriptionCell}`}>
-                      <p>{descriptions}</p>
-                      <ul>
-                        {effects.map(effect => {
-                          return <li>{effectToString(effect)}</li>
-                        })}
-                      </ul>
-                    </td>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemRowDropCell}`}>
-                      {isKeeping ? <button onClick={() => doGameAction({ type: actionTypes.DROP_ITEM, backpackID: 4 })}>Drop</button> :
-                        <button onClick={() => doGameAction({ type: actionTypes.KEEP_ITEM, backpackID: 4 })}>Keep</button>}
+                    <td className={`${styles.dropItemCell} ${styles.dropItemCellHeader} ${styles.dropItemRowDropCell}`}>
+                      Keep?
                     </td>
                   </tr>
-                })()}
-                {backpack.map((item, i) => {
-                  if (!item) return <tr></tr>
-                  const { name, icon, descriptions, effects, uses } = item;
-                  const isKeeping = keepBackpack.includes(i);
-                  const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
+                </thead>
+                <tbody>
+                  {(() => {
+                    if (!loot) return null;
+                    const { name, icon, descriptions, effects, uses } = loot;
+                    const lootID = 4;
+                    const isKeeping = keepBackpack.includes(lootID);
+                    const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
 
-                  const usesStr = uses < 100 ? uses : '99+';
-                  return <tr className={`${styles.dropItemRow} ${dropStyle}`}>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
-                      <span className={styles.itemButtonIcon}>{icon}</span><br />
-                      <span>{capitalize(name)} ({usesStr})</span>
-                    </td>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemDescriptionCell}`}>
-                      <p>{descriptions}</p>
-                      <ul>
-                        {effects.map(effect => {
-                          return <li>{effectToString(effect)}</li>
-                        })}
-                      </ul>
-                    </td>
-                    <td className={`${styles.dropItemCell} ${styles.dropItemRowDropCell}`}>
-                      {isKeeping ? <button onClick={() => doGameAction({ type: actionTypes.DROP_ITEM, backpackID: i })}>Drop</button> :
-                        <button onClick={() => doGameAction({ type: actionTypes.KEEP_ITEM, backpackID: i })}>Keep</button>}
-                    </td>
-                  </tr>
-                })}
+                    const usesStr = uses < 100 ? uses : '99+';
+                    return <tr className={`${styles.dropItemRow} ${styles.dropItemRowLoot} ${dropStyle}`}>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
+                        <span className={styles.itemButtonIcon}>{icon}</span><br />
+                        <span>{capitalize(name)} ({usesStr})</span><br />
+                        <span>(New item)</span>
+                      </td>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemDescriptionCell}`}>
+                        <p>{descriptions}</p>
+                        <ul>
+                          {effects.map(effect => {
+                            return <li>{effectToString(effect)}</li>
+                          })}
+                        </ul>
+                      </td>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemRowDropCell}`}>
+                        {isKeeping ? <button onClick={() => doGameAction({ type: actionTypes.DROP_ITEM, backpackID: 4 })}>Drop</button> :
+                          <button onClick={() => doGameAction({ type: actionTypes.KEEP_ITEM, backpackID: 4 })}>Keep</button>}
+                      </td>
+                    </tr>
+                  })()}
+                  {backpack.map((item, i) => {
+                    if (!item) return <tr></tr>
+                    const { name, icon, descriptions, effects, uses } = item;
+                    const isKeeping = keepBackpack.includes(i);
+                    const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
+
+                    const usesStr = uses < 100 ? uses : '99+';
+                    return <tr className={`${styles.dropItemRow} ${dropStyle}`}>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
+                        <span className={styles.itemButtonIcon}>{icon}</span><br />
+                        <span>{capitalize(name)} ({usesStr})</span>
+                      </td>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemDescriptionCell}`}>
+                        <p>{descriptions}</p>
+                        <ul>
+                          {effects.map(effect => {
+                            return <li>{effectToString(effect)}</li>
+                          })}
+                        </ul>
+                      </td>
+                      <td className={`${styles.dropItemCell} ${styles.dropItemRowDropCell}`}>
+                        {isKeeping ? <button onClick={() => doGameAction({ type: actionTypes.DROP_ITEM, backpackID: i })}>Drop</button> :
+                          <button onClick={() => doGameAction({ type: actionTypes.KEEP_ITEM, backpackID: i })}>Keep</button>}
+                      </td>
+                    </tr>
+                  })}
+                </tbody>
               </table>
             </div>
           </>
@@ -587,6 +614,7 @@ function App() {
           </>
         );
       }
+      default:
     }
   })();
 
