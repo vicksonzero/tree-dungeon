@@ -53,7 +53,7 @@ const items = {
 const lootTables = [
   [ // 0
     {
-      weight: 10,
+      weight: 8,
       name: 'hamburger',
       uses: 5,
     },
@@ -121,9 +121,9 @@ export function weightedGetItem(tier, rng) {
   }
 }
 
-export function doEffect(effectDef, me, them) {
+export function doEffect(effectDef, me, them, fightLogs) {
   console.log(`doEffect (${effectDef.type})`);
-  const result = { me, them };
+  const result = { me, them, fightLogs };
 
   switch (effectDef.type) {
     case 'dmg': {
@@ -146,6 +146,8 @@ export function doEffect(effectDef, me, them) {
 
     case 'echo': {
       console.log(effectDef.message);
+      result.fightLogs = [...fightLogs];
+      result.fightLogs.push(<>It says <span style={{ color: 'orange' }}>{effectDef.message}</span></>);
     }
 
     default:

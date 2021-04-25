@@ -61,7 +61,7 @@
 .dropItemRowLoot {
   background-color: rgb(255, 255, 170);
 }
-.dropItemRowDrop{
+.dropItemRowDrop {
   background-color: #aaa;
 }
 .dropItemCell {
@@ -86,8 +86,6 @@
   text-align: center;
 }
 
-
-
 .fightScreen {
   display: flex;
   flex-direction: column;
@@ -97,7 +95,11 @@
 .fightIcon {
   font-size: 48px;
 }
-
+.fightLogs {
+  overflow-y: scroll;
+  height: 200px;
+  width: 100%;
+}
 .roomBar {
   width: auto;
   background-color: white;

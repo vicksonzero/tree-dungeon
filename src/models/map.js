@@ -1,5 +1,7 @@
 
 import * as seedrandom from 'seedrandom';
+import { weightedGetMonster } from './monsters';
+
 
 
 const manualMap = {
@@ -104,8 +106,7 @@ export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
         result.push({
             index: newIndex,
             monster: {
-                name: 'rat',
-                lv: 1,
+                name: weightedGetMonster(itemTier, rng).name,
             },
             loot: rng() > 0.5 ? null : { itemTier },
             depth: parentNode.depth + 1,

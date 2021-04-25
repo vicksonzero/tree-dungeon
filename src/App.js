@@ -1,6 +1,6 @@
 //@ts-check
 import * as React from "react"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import './styles.css'
 import styles from './App.module.css';
 import { generateMap, map as initMap } from "./models/map"
@@ -31,8 +31,9 @@ const initialState = {
   depth: 0,
   roomID: -1,
   roomHistory: [],
-  phase: 'titleScreen', // titleScreen, endScreen, roomStart, fight, item, move
+  phase: 'titleScreen', // titleScreen, endScreen, roomStart, fight, item, move, gameOver
   turn: 'player', // player, monster
+  fightLogs: [],
 
   // entities
   player: {
@@ -75,7 +76,7 @@ function gameStateReducer(state, action) {
         console.log(nextState.map);
 
         if (isCheat) {
-          nextState.backpack[1] = {
+          nextState.backpack[2] = {
             name: 'BF Sword',
             icon: '🍗',
             uses: 1000,
@@ -87,7 +88,7 @@ function gameStateReducer(state, action) {
               }
             ]
           };
-          nextState.backpack[2] = {
+          nextState.backpack[3] = {
             name: 'Teddy bear',
             icon: '🐻',
             uses: 100000,
@@ -101,7 +102,7 @@ function gameStateReducer(state, action) {
           };
         }
         nextState.phase = 'roomStart';
-        nextState.pauseFor = 1000;
+        nextState.pauseFor = 2000;
         return nextState;
       }
       return state;
@@ -112,16 +113,17 @@ function gameStateReducer(state, action) {
     }
     case 'roomStart': {
       if (action.type === actionTypes.TICK) {
-        const { map } = state;
+        const { map, roomID } = state;
         const nextState = {
           ...state,
           pauseFor: 0,
         };
 
-        const nextRoom = map.nodes[0];
+        const nextRoom = map.nodes[roomID];
 
-        nextState.monster = nextRoom.monster && getMonster(nextRoom.monster.name, nextRoom.monster.lv);
-
+        console.log(`roomStart ${roomID} monster=${nextRoom?.monster?.name}`);
+        nextState.monster = nextRoom.monster && getMonster(nextRoom.monster.name);
+        nextState.fightLogs = [`A wild ${nextState.monster.name} appeared!`];
 
         if (nextState.monster) {
           nextState.phase = 'fight';
@@ -139,7 +141,7 @@ function gameStateReducer(state, action) {
       return state;
     }
     case 'fight': {
-      const { turn, player, monster, backpack } = state;
+      const { turn, player, monster, backpack, fightLogs } = state;
       console.log(`gameStateReducer:fight turn=${turn}`);
       if (action.type === actionTypes.TICK) {
         if (!monster || monster.hp <= 0) {
@@ -150,6 +152,22 @@ function gameStateReducer(state, action) {
 
           nextState.phase = 'item';
           nextState.pauseFor = 100;
+          nextState.fightLogs = [...fightLogs];
+          nextState.fightLogs.push(`${player.name} wins!`);
+
+          return nextState;
+        }
+
+        if (player.hp <= 0) {
+          const nextState = {
+            ...state,
+            pauseFor: 0,
+          };
+
+          nextState.phase = 'gameOver';
+          nextState.pauseFor = 100;
+          nextState.fightLogs = [...fightLogs];
+          nextState.fightLogs.push(`${player.name} fainted!`);
 
           return nextState;
         }
@@ -161,13 +179,18 @@ function gameStateReducer(state, action) {
           if (Math.random() > monster.aggro) {
             nextState.turn = 'player';
             console.log(`gameStateReducer:fight ${monster.name} was not doing anything`);
+            nextState.fightLogs = [...fightLogs];
+            nextState.fightLogs.push(`${monster.name} was not doing anything...`);
             return nextState;
           }
 
           console.log(`gameStateReducer:fight ${monster.name} used "${monster.attack.name}"`);
+          nextState.fightLogs = [...fightLogs];
+          nextState.fightLogs.push(`${monster.name} used "${monster.attack.name}"!`);
           for (const effect of monster.attack.effects) {
-            const { me, them } = doEffect(effect, monster, player);
+            const { me, them, fightLogs: fightLogs_b } = doEffect(effect, monster, player, nextState.fightLogs);
 
+            nextState.fightLogs = fightLogs_b;
             nextState.player = them;
             nextState.monster = me;
             nextState.turn = 'player';
@@ -190,9 +213,12 @@ function gameStateReducer(state, action) {
         const item = { ...backpack[backpackSlotID] };
 
 
+        nextState.fightLogs = [...fightLogs];
+        nextState.fightLogs.push(`${player.name} used "${item.name}"!`);
         for (const effect of item.effects) {
-          const { me, them } = doEffect(effect, player, monster);
+          const { me, them, fightLogs: fightLogs_b } = doEffect(effect, player, monster, nextState.fightLogs);
 
+          nextState.fightLogs = fightLogs_b;
           nextState.player = me;
           nextState.monster = them;
         }
@@ -336,7 +362,7 @@ function gameStateReducer(state, action) {
         };
 
         nextState.phase = 'roomStart';
-        nextState.pauseFor = 1000;
+        nextState.pauseFor = 2000;
 
 
         return nextState;
@@ -362,6 +388,11 @@ function App() {
   const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/official_game', null);
   const [url, setUrl] = useLocalStorage('dickson.md/official_game_url', null);
   const [isCheat] = useLocalStorage('dickson.md/dev_mode', false);
+  const messagesEndRef = useRef(null);
+  const scrollToBottom = () => {
+    console.log('scrollToBottom');
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
   if (url === null) {
     setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json');
@@ -397,7 +428,8 @@ function App() {
     map,
     roomHistory,
     keepBackpack,
-    pauseFor
+    pauseFor,
+    fightLogs,
   } = gameState;
 
   useEffect(() => {
@@ -410,6 +442,9 @@ function App() {
 
     return () => clearTimeout(timer);
   });
+  useEffect(() => {
+    scrollToBottom()
+  }, [fightLogs]);
 
   const room = map.nodes[roomID];
 
@@ -442,15 +477,15 @@ function App() {
       }
 
       case 'endScreen': {
+        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         const msg = (() => {
           if (depth === 10) {
             return 'You have reached the very depth';
           } else {
-            return 'You have reached the end of a journey.';
+            return `You have reached the end of a journey, but did not find the great treasure at depth ${gameDepth}`;
           }
         })();
 
-        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         return (
           <div>
             <h1>Congratulations!</h1>
@@ -462,9 +497,26 @@ function App() {
         );
       }
 
+      case 'gameOver': {
+        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `R${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
+        const msg = <>You have been defeated. <br />You miraculously respawn at the entrance, but all of your items are gone.</>;
+
+        return (
+          <div>
+            <h1>Game Over!</h1>
+            <p>{msg}</p>
+            <p>Seed: <code>{gameSeed}</code></p>
+            <p>Your Journey: {historyStrList.join(' → ')} → {roomID} {monster.icon} → 💀</p>
+
+          </div>
+        );
+      }
+
       case 'roomStart': {
+        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `R${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         return (
           <div className={styles.center}>
+            <div style={{ textAlign: 'center' }}>{[...historyStrList, ''].join(' → ')}</div>
             <h1 style={{ textAlign: 'center' }}>Room {roomID}</h1>
           </div>
         );
@@ -480,10 +532,12 @@ function App() {
             <div className={styles.fightScreen}>
               <div className={styles.fightIcon}>{icon}</div>
               <div><h2>{capitalize(name)}</h2></div>
-              <div className={''}>HP: {hpPercent}%</div>
-              <div className={styles.center}>
-                <div>
-                </div>
+              <div className={''}>HP: {Math.floor(hpPercent)}%</div>
+              <div className={`${styles.fightLogs}`}>
+                <ul>
+                  {fightLogs.map(log => <li>{log}</li>)}
+                  <div ref={messagesEndRef} />
+                </ul>
               </div>
             </div>
           </>
