@@ -1,6 +1,6 @@
 const items = {
   'hamburger': {
-    name: 'hamburger',
+    name: 'Hamburger',
     icon: '🍔',
     uses: 5,
     descriptions: 'Yummy burger to restore some health. Still edible?!',
@@ -12,7 +12,7 @@ const items = {
     ]
   },
   'apple': {
-    name: 'apple',
+    name: 'Apple',
     icon: '🍎',
     uses: 1,
     descriptions: 'Juicy Apple to boost your max health',
@@ -24,7 +24,7 @@ const items = {
     ]
   },
   'dagger': {
-    name: 'dagger',
+    name: 'Dagger',
     icon: '🔪',
     uses: 1000,
     descriptions: 'Trusty old dagger to at least fend off small animals',
@@ -36,10 +36,10 @@ const items = {
     ]
   },
   'dagger +1': {
-    name: 'dagger +1',
+    name: 'Dagger +1',
     icon: '🔪',
     uses: 1000,
-    descriptions: 'Trusty old dagger to at least fend off small animals',
+    descriptions: 'A better dagger for self defense',
     effects: [
       {
         type: 'dmg',
@@ -48,7 +48,7 @@ const items = {
     ]
   },
   'sword': {
-    name: 'sword',
+    name: 'Sword',
     icon: '🗡',
     uses: 50,
     descriptions: 'A proper sword',
@@ -60,7 +60,7 @@ const items = {
     ]
   },
   'hammer': {
-    name: 'hammer',
+    name: 'Hammer of Binding',
     icon: '🔨',
     uses: 1,
     descriptions: 'Combines two random items into one',
