@@ -106,8 +106,15 @@
   border-bottom: #ccc solid 1px;
   display: flex;
   flex-direction: row;
-  justify-content: space-around;
+  justify-content: flex-start;
   padding: 1ex;
+}
+.roomBarDepthLabel{
+  padding-right: 1em;
+  border-right: #888 solid 1px;
+}
+.roomBarRoomsLabel{
+  padding-left: 1em;
 }
 .playerBar {
   width: auto;

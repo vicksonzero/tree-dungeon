@@ -383,7 +383,7 @@ function gameStateReducer(state, action) {
 function App() {
   console.log('Rerender');
   const [playerName, setPlayerName] = useLocalStorage('dickson.md/player_name', 'Player');
-  const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/game_seed', 'LD48');
+  const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/game_seed', 'LD-48');
   const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/game_depth', 10);
   const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/official_game', null);
   const [url, setUrl] = useLocalStorage('dickson.md/official_game_url', null);
@@ -459,11 +459,11 @@ function App() {
               <p>
                 Venture deep into this underground dungeon and uncover the one treasure at the very bottom.
               </p>
-              <p>
-                <label>Name: <input type="text" value={playerName} onChange={(event) => setPlayerName(event.target.value)} /></label> <br />
-                <label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} /></label>
-                <label> Depth: <input type="text" value={gameDepth} onChange={(event) => setGameDepth(event.target.value)} /></label>
-              </p>
+              <div>
+                <div><label>Name: <input type="text" value={playerName} onChange={(event) => setPlayerName(event.target.value)} /></label></div>
+                <div><label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} /></label></div>
+                <div><label>Depth: <input type="text" value={gameDepth} onChange={(event) => setGameDepth(event.target.value)} /></label></div>
+              </div>
               <p>
                 Official seed: {officialGame ? `["${officialGame.game_seed}", ${officialGame.game_depth}]` : 'Loading...'} <br />
                 <button onClick={() => applyOfficialGame()}>Use official seed</button>
@@ -477,7 +477,7 @@ function App() {
       }
 
       case 'endScreen': {
-        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
+        const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `R${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         const msg = (() => {
           if (depth === 10) {
             return 'You have reached the very depth';
@@ -491,7 +491,7 @@ function App() {
             <h1>Congratulations!</h1>
             <p>{msg}</p>
             <p>Seed: <code>{gameSeed}</code></p>
-            <p>Your Journey: {historyStrList.join(' → ')} → {roomID} {monster.icon} ⭐</p>
+            <p>Your Journey: {historyStrList.join('→ ')}→ R{roomID} {monster.icon} ⭐</p>
 
           </div>
         );
@@ -506,7 +506,7 @@ function App() {
             <h1>Game Over!</h1>
             <p>{msg}</p>
             <p>Seed: <code>{gameSeed}</code></p>
-            <p>Your Journey: {historyStrList.join(' → ')} → {roomID} {monster.icon} → 💀</p>
+            <p>Your Journey: {historyStrList.join('→ ')}→ R{roomID} {monster.icon} → 💀</p>
 
           </div>
         );
@@ -516,7 +516,7 @@ function App() {
         const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `R${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
         return (
           <div className={styles.center}>
-            <div style={{ textAlign: 'center' }}>{[...historyStrList, ''].join(' → ')}</div>
+            <div style={{ textAlign: 'center' }}>{[...historyStrList, ''].join('→ ')}</div>
             <h1 style={{ textAlign: 'center' }}>Room {roomID}</h1>
           </div>
         );
@@ -672,9 +672,12 @@ function App() {
     }
   })();
 
-  const roomBar = <>
-    <span>Depth: {depth}</span><span>RoomID: {roomID}</span>
-  </>
+  const historyStrList = roomHistory.map(({ roomID, monster, dir }) => `R${roomID} ${monster} ${['L', 'M', 'R'][dir]}`);
+  const roomBar = roomID < 0 ? <></> :
+    <>
+      <span className={styles.roomBarDepthLabel}>Depth: {depth}</span>
+      <span className={styles.roomBarRoomsLabel}>Rooms: {historyStrList.join('→ ')}→ R{roomID}</span>
+    </>
 
   const playerBar = <>
     <span className={styles.playerBarItem}>{player.name}</span>
