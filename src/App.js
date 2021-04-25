@@ -384,7 +384,7 @@ function App() {
   console.log('Rerender');
   const [playerName, setPlayerName] = useLocalStorage('dickson.md/player_name', 'Player');
   const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/game_seed', 'LD-48');
-  const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/game_depth', 10);
+  const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/game_depth', 12);
   const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/official_game', null);
   const [url, setUrl] = useLocalStorage('dickson.md/official_game_url', null);
   const [isCheat] = useLocalStorage('dickson.md/dev_mode', false);
