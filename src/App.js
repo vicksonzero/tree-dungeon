@@ -180,7 +180,7 @@ function gameStateReducer(state, action) {
             nextState.turn = 'player';
             console.log(`gameStateReducer:fight ${monster.name} was not doing anything`);
             nextState.fightLogs = [...fightLogs];
-            nextState.fightLogs.push(`${monster.name} was not doing anything...`);
+            nextState.fightLogs.push(<>{monster.name} <span style={{ color: 'grey' }}>was not doing anything</span>...</>);
             return nextState;
           }
 
@@ -431,6 +431,8 @@ function App() {
     pauseFor,
     fightLogs,
   } = gameState;
+
+  window.map = map;
 
   useEffect(() => {
     if (pauseFor <= 0) return;

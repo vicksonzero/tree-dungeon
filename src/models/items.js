@@ -53,12 +53,12 @@ const items = {
 const lootTables = [
   [ // 0
     {
-      weight: 8,
+      weight: 10,
       name: 'hamburger',
       uses: 5,
     },
     {
-      weight: 4,
+      weight: 5,
       name: 'apple',
       uses: 1,
     },
