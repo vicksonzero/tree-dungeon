@@ -471,7 +471,7 @@ function App() {
                 <button onClick={() => applyOfficialGame()}>Use official seed</button>
               </p>
               <p>
-                <button onClick={() => doGameAction({ type: actionTypes.START_GAME, gameSeed, gameDepth, playerName })}>Dive in!</button>
+                <button onClick={() => doGameAction({ type: actionTypes.START_GAME, gameSeed, gameDepth, playerName })}>Game Start!</button>
               </p>
             </div>
           </div>
