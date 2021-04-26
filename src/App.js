@@ -26,6 +26,7 @@ const initialState = {
   // game
   map: initMap,
   isCheat: false,
+  showWorldMap: false,
 
   // progress
   depth: 0,
@@ -35,6 +36,7 @@ const initialState = {
   turn: 'player', // player, monster
   fightLogs: [],
   footprints: [],
+  persistedItem: null,
 
   // entities
   player: {
@@ -60,7 +62,7 @@ function gameStateReducer(state, action) {
   switch (state.phase) {
     case 'titleScreen': {
       if (action.type === actionTypes.START_GAME) {
-        const { isCheat, backpack } = state;
+        const { isCheat, backpack, persistedItem } = state;
         const nextState = {
           ...state,
           roomID: 0,
@@ -69,10 +71,11 @@ function gameStateReducer(state, action) {
             nodes: generateMap(action.gameSeed, action.gameDepth, 3),
           },
           player: {
-            ...state.player,
+            ...initialState.player,
             name: action.playerName,
           },
           backpack: [...backpack],
+          showWorldMap: false,
         };
         console.log(drawMap(nextState.map.nodes, 12));
 
@@ -102,6 +105,10 @@ function gameStateReducer(state, action) {
             ]
           };
         }
+        if (persistedItem) {
+          nextState.backpack[1] = { ...persistedItem };
+          nextState.persistedItem = null;
+        }
         nextState.phase = 'roomStart';
         nextState.pauseFor = 2000;
         return nextState;
@@ -112,7 +119,7 @@ function gameStateReducer(state, action) {
 
     case 'roomStart': {
       if (action.type === actionTypes.TICK) {
-        const { map, roomID } = state;
+        const { map, roomID, partingCurse } = state;
         const nextState = {
           ...state,
           pauseFor: 0,
@@ -123,6 +130,12 @@ function gameStateReducer(state, action) {
         console.log(`roomStart ${roomID} monster=${nextRoom?.monster?.name}`);
         nextState.monster = nextRoom.monster && getMonster(nextRoom.monster.name);
         nextState.fightLogs = [`A wild ${nextState.monster.name} appeared!`];
+
+        if (nextState.monster && partingCurse.includes(roomID)) {
+          console.log('partingCurse');
+          nextState.monster.hp = nextState.monster.hp / 2;
+          nextState.fightLogs.push(`${nextState.monster.name} looks weaker than before!`);
+        }
 
         if (nextState.monster) {
           nextState.phase = 'fight';
@@ -261,7 +274,20 @@ function gameStateReducer(state, action) {
           const { itemTier, name, uses } = room.loot;
           console.log('itemTier', itemTier);
 
-          const newLoot = (itemTier != null) ? weightedGetItem(itemTier, Math.random) : { ...getItem(name), uses };
+          const luckDice = () => {
+            const loadDice = backpack.find(item => {
+              if (!item) return false;
+              return item.effects.some(effect => effect.type === 'dice');
+            });
+
+            if (loadDice) {
+              const diceRange = 1 - Math.pow(0.9, loadDice.uses);
+              return Math.min(0.99999999, (1 - diceRange) + Math.random() * diceRange);
+            } else {
+              return Math.random();
+            }
+          }
+          const newLoot = (itemTier != null) ? weightedGetItem(itemTier, luckDice) : { ...getItem(name), uses };
 
           const duplicateItemIndex = backpack.findIndex(item => item && item.name === newLoot.name);
           console.log('duplicateItemIndex', newLoot.name, duplicateItemIndex, newLoot.uses);
@@ -369,8 +395,8 @@ function gameStateReducer(state, action) {
         const itemTier = Math.floor(depth / 4);
         console.log('itemTier', itemTier);
 
-        const cheatRNG = () => Math.min(0.99999999, Math.random() + 0.7);
-        const newLoot = weightedGetItem(itemTier, cheatRNG);
+        const luckDice = () => Math.min(0.99999999, Math.random() + 0.7);
+        const newLoot = weightedGetItem(itemTier, luckDice);
 
         const duplicateItemIndex = backpack.findIndex(item => item && item.name === newLoot.name);
         console.log('duplicateItemIndex', newLoot.name, duplicateItemIndex, newLoot.uses);
@@ -417,39 +443,35 @@ function gameStateReducer(state, action) {
 
 
       if (action.type === actionTypes.FINISH_DROP) {
-        if (keepBackpack.length > 4) return state;
+        if (keepBackpack.length != 1) return state;
 
         const nextState = {
           ...state,
           loot: null,
           duplicatedLoot: null,
+          persistedItem: null,
         };
 
         const keepBackpackSorted = keepBackpack.slice();
         keepBackpackSorted.sort();
 
-        const newBackpack = [];
 
         for (const index of keepBackpackSorted) {
           if (index < 4) {
-            newBackpack.push(backpack[index]);
+            nextState.persistedItem = backpack[index];
           } else {
-            newBackpack.push(loot);
+            nextState.persistedItem = loot;
           }
         }
-        while (newBackpack.length < 4) {
-          newBackpack.push(null);
-        }
 
-        nextState.backpack = newBackpack;
+        nextState.backpack = [
+          getItem('dagger'),
+          nextState.persistedItem,
+          null,
+          null,
+        ];
 
-        const haveNextRoom = !room.next.every(item => item == null);
-        if (haveNextRoom) {
-          nextState.phase = 'move';
-        } else {
-          nextState.phase = 'endScreen';
-          nextState.pauseFor = 100;
-        }
+        nextState.phase = 'titleScreen';
 
         return nextState;
       }
@@ -457,10 +479,32 @@ function gameStateReducer(state, action) {
     }
 
 
+    case 'gameOver': {
+      if (action.type === actionTypes.FINISH_DROP) {
+        const nextState = {
+          ...state,
+          loot: null,
+          duplicatedLoot: null,
+          persistedItem: null,
+        };
+
+        nextState.backpack = [
+          getItem('dagger'),
+          null,
+          null,
+          null,
+        ];
+
+        nextState.phase = 'titleScreen';
+
+        return nextState;
+      }
+    }
+
     case 'move': {
       if (action.type === actionTypes.MOVE) {
         const { nextID, dir } = action;
-        const { map, roomID, roomHistory, monster, backpack, footprints } = state;
+        const { map, roomID, roomHistory, monster, backpack, footprints, partingCurse } = state;
         const nextRoom = map.nodes[nextID];
         if (!nextRoom) return state;
 
@@ -481,8 +525,9 @@ function gameStateReducer(state, action) {
           const { name, icon, descriptions, effects, uses } = item;
           console.log('move items', name, effects.length);
           for (const effect of effects) {
-            const { footprints: footprints_b } = onLeaveRoom(effect, nextID, map, footprints);
+            const { footprints: footprints_b, partingCurse: partingCurse_b } = onLeaveRoom(effect, roomID, nextID, map, nextState.footprints, nextState.partingCurse);
             nextState.footprints = footprints_b;
+            nextState.partingCurse = partingCurse_b;
           }
         }
 
@@ -510,6 +555,8 @@ function App() {
   const [url, setUrl] = useLocalStorage('dickson.md/depth-first-dungeon/official_game_url', null);
   const [isCheat] = useLocalStorage('dickson.md/depth-first-dungeon/dev_mode', false);
   const [gameFootprints, setGameFootprints] = useLocalStorage('dickson.md/depth-first-dungeon/footprints', []);
+  const [gamePartingCurse, setGamePartingCurse] = useLocalStorage('dickson.md/depth-first-dungeon/parting_curse', []);
+  const [gamePersistedItem, setGamePersistedItem] = useLocalStorage('dickson.md/depth-first-dungeon/persisted_item', null);
 
 
   const messagesEndRef = useRef(null);
@@ -520,7 +567,7 @@ function App() {
 
 
   if (url === null) {
-    setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json');
+    setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/tree-dungeon-seed.json');
   }
 
   useEffect(() => {
@@ -538,7 +585,19 @@ function App() {
     }
   };
 
-  const [gameState, doGameAction] = React.useReducer(gameStateReducer, { ...initialState, isCheat, footprints: gameFootprints });
+  const [gameState, doGameAction] = React.useReducer(gameStateReducer, {
+    ...initialState,
+    isCheat,
+    footprints: gameFootprints,
+    partingCurse: gamePartingCurse,
+    persistedItem: gamePersistedItem,
+    backpack: [
+      getItem('dagger'),
+      gamePersistedItem,
+      null,
+      null,
+    ],
+  });
 
   const {
     depth,
@@ -556,6 +615,8 @@ function App() {
     pauseFor,
     fightLogs,
     footprints,
+    partingCurse,
+    persistedItem,
   } = gameState;
 
   window.map = map;
@@ -570,12 +631,22 @@ function App() {
 
     return () => clearTimeout(timer);
   });
+
   useEffect(() => {
     scrollToBottom()
   }, [fightLogs]);
+
   useEffect(() => {
     setGameFootprints(footprints.filter((value, index, arr) => arr.indexOf(value) === index));
   }, [footprints]);
+
+  useEffect(() => {
+    setGamePartingCurse(partingCurse.filter((value, index, arr) => arr.indexOf(value) === index));
+  }, [partingCurse]);
+
+  useEffect(() => {
+    setGamePersistedItem(persistedItem);
+  }, [persistedItem]);
 
 
 
@@ -634,10 +705,10 @@ function App() {
         })();
 
         const actionLabel = (() => {
-          if (keepBackpack.length <= 1) {
+          if (keepBackpack.length === 1) {
             return `Start new game with ${keepBackpack.length} / 1 items`;
           } else {
-            return `Backpack is too full (${keepBackpack.length} / 1)`;
+            return `Please choose one item (${keepBackpack.length} / 1)`;
           }
         })();
         return (
@@ -648,9 +719,9 @@ function App() {
               <p>Seed: <code>{gameSeed}</code></p>
               <p>Your Journey: {historyStrList.join('→ ')}→ R{roomID} {monster.icon} ⭐</p>
               <p>You rewarded with {lootStr} in this room!</p>
-              <p>You can keep 1 item for your next attempt!</p>
+              <p>You can keep 1 item (and a new <span style={{ color: 'orange' }}>Broken Dagger</span>) for your next attempt!</p>
               <p>
-                <button onClick={() => doGameAction({ type: actionTypes.FINISH_DROP })} disabled={keepBackpack.length > 1}>{actionLabel}</button>
+                <button onClick={() => doGameAction({ type: actionTypes.FINISH_DROP })} disabled={keepBackpack.length !== 1}>{actionLabel}</button>
               </p>
               <table style={{ borderCollapse: 'collapse' }}>
 
@@ -686,7 +757,7 @@ function App() {
                         <p>{descriptions}</p>
                         <ul>
                           {effects.map(effect => {
-                            return <li>{effectToString(effect)}</li>
+                            return <li>{effectToString(effect, gameState)}</li>
                           })}
                         </ul>
                       </td>
@@ -712,7 +783,7 @@ function App() {
                         <p>{descriptions}</p>
                         <ul>
                           {effects.map(effect => {
-                            return <li>{effectToString(effect)}</li>
+                            return <li>{effectToString(effect, gameState)}</li>
                           })}
                         </ul>
                       </td>
@@ -740,6 +811,7 @@ function App() {
             <p>Seed: <code>{gameSeed}</code></p>
             <p>Your Journey: {historyStrList.join('→ ')}→ R{roomID} {monster.icon} → 💀</p>
 
+            <button onClick={() => doGameAction({ type: actionTypes.FINISH_DROP })}>Restart</button>
           </div>
         );
       }
@@ -786,7 +858,7 @@ function App() {
                       <h3>{player.name}</h3>
                     </td>
                     <td style={{ width: '70%' }}>
-                      <div className={''}>HP: {player.hp}/{player.maxHp}</div>
+                      <div className={''}>HP: {player.hp}/{player.maxHp} ({Math.floor(playerHpPercent)}%)</div>
                     </td>
                   </tr>
                 </tbody>
@@ -861,7 +933,7 @@ function App() {
                         <p>{descriptions}</p>
                         <ul>
                           {effects.map(effect => {
-                            return <li>{effectToString(effect)}</li>
+                            return <li>{effectToString(effect, gameState)}</li>
                           })}
                         </ul>
                       </td>
@@ -887,7 +959,7 @@ function App() {
                         <p>{descriptions}</p>
                         <ul>
                           {effects.map(effect => {
-                            return <li>{effectToString(effect)}</li>
+                            return <li>{effectToString(effect, gameState)}</li>
                           })}
                         </ul>
                       </td>

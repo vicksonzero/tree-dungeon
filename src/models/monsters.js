@@ -122,5 +122,5 @@ export function weightedGetMonster(tier, rng) {
 }
 
 export function getMonster(name) {
-  return monsters[name];
+  return { ...monsters[name] };
 }

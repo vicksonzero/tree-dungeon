@@ -11,6 +11,18 @@ const items = {
       }
     ]
   },
+  'rice': {
+    name: 'Rice Ball',
+    icon: '🍙',
+    uses: 3,
+    descriptions: 'Hearty packed lunch with soothing stuffings in it',
+    effects: [
+      {
+        type: 'heal',
+        amount: 6,
+      }
+    ]
+  },
   'apple': {
     name: 'Apple',
     icon: '🍎',
@@ -35,7 +47,7 @@ const items = {
     ]
   },
   'dagger': {
-    name: 'Dagger',
+    name: 'Broken Dagger',
     icon: '🔪',
     uses: 1000,
     descriptions: 'Trusty old dagger to at least fend off small animals',
@@ -47,7 +59,7 @@ const items = {
     ]
   },
   'dagger +1': {
-    name: 'Dagger +1',
+    name: 'Actual Dagger',
     icon: '🔪',
     uses: 1000,
     descriptions: 'A better dagger for self defense',
@@ -81,6 +93,28 @@ const items = {
       }
     ]
   },
+  'dynamite': {
+    name: 'Parting Gift',
+    icon: '🧨',
+    uses: -1,
+    descriptions: 'Curse every monster you have killed',
+    effects: [
+      {
+        type: 'partingCurse',
+      }
+    ]
+  },
+  'dice': {
+    name: 'Loaded Dice',
+    icon: '🎲',
+    uses: 1,
+    descriptions: 'Nudge luck towards your side',
+    effects: [
+      {
+        type: 'dice',
+      }
+    ]
+  },
 };
 
 
@@ -109,47 +143,72 @@ const lootTables = [
       uses: 7,
     },
     {
-      weight: 5,
+      weight: 10,
       name: 'dagger +1',
       uses: 1000,
     },
     {
-      weight: 4,
+      weight: 10,
       name: 'apple',
       uses: 1,
     },
     {
-      weight: 1,
+      weight: 5,
+      name: 'rice',
+      uses: 3,
+    },
+    {
+      weight: 4,
       name: 'hammer',
+      uses: 1,
+    },
+    {
+      weight: 1,
+      name: 'dice',
       uses: 1,
     },
   ],
   [ // 2
     {
-      weight: 10,
+      weight: 4,
       name: 'hamburger',
       uses: 7,
     },
     {
-      weight: 5,
+      weight: 3,
       name: 'dagger +1',
       uses: 1000,
     },
     {
-      weight: 4,
+      weight: 8,
       name: 'apple',
       uses: 1,
     },
     {
-      weight: 2,
+      weight: 9,
+      name: 'rice',
+      uses: 3,
+    },
+    {
+      weight: 4,
       name: 'sword',
+      uses: 1,
+    },
+    {
+      weight: 2,
+      name: 'dynamite',
+      uses: -1,
+    },
+    {
+      weight: 1,
+      name: 'dice',
       uses: 1,
     },
   ]
 ]
 
 export function getItem(name) {
-  return items[name];
+  return { ...items[name] };
 }
 
 export function weightedGetItem(tier, rng) {
@@ -177,15 +236,20 @@ export function weightedGetItem(tier, rng) {
   }
 }
 
-export function onLeaveRoom(effectDef, nextRoomID, map, footprints) {
+export function onLeaveRoom(effectDef, roomID, nextRoomID, map, footprints, partingCurse) {
   console.log(`onLeaveRoom (${effectDef.type})`);
-  const result = { footprints };
+  const result = { footprints, partingCurse };
 
   switch (effectDef.type) {
 
     case 'footprints': {
       result.footprints = [...footprints];
       result.footprints.push(nextRoomID);
+    } break;
+
+    case 'partingCurse': {
+      result.partingCurse = [...partingCurse];
+      result.partingCurse.push(roomID);
     } break;
 
     default:
@@ -234,7 +298,7 @@ export function doEffect(effectDef, me, them, fightLogs, backpack) {
   return result;
 }
 
-export function effectToString(effectDef) {
+export function effectToString(effectDef, state) {
   switch (effectDef.type) {
     case 'dmg': {
       return `Deal ${effectDef.amount} damage`;
@@ -253,7 +317,18 @@ export function effectToString(effectDef) {
     }
 
     case 'footprints': {
-      return `Leave footprints on the floor`;
+      const { footprints } = state;
+      return `Leave footprints on the floor (${footprints.length} left)`;
+    }
+
+    case 'partingCurse': {
+      const { partingCurse } = state;
+      return `Curse monsters you have killed (${partingCurse.length} cursed)`;
+    }
+
+    case 'dice': {
+      const diceShift = 1 - Math.pow(0.9, effectDef.uses);
+      return `Dice is ${Math.floor(diceShift * 100)}% biased`;
     }
 
     default:
