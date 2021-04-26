@@ -23,6 +23,17 @@ const items = {
       }
     ]
   },
+  'shoes': {
+    name: 'Leather Shoes',
+    icon: '👞',
+    uses: -1, // equipment
+    descriptions: 'An item for formal dressing. At least it is good for leaving footprints',
+    effects: [
+      {
+        type: 'footprints',
+      }
+    ]
+  },
   'dagger': {
     name: 'Dagger',
     icon: '🔪',

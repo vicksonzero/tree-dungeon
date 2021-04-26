@@ -3,7 +3,7 @@ import * as React from "react"
 import { useEffect, useRef } from "react"
 import './styles.css'
 import styles from './App.module.css';
-import { generateMap, map as initMap } from "./models/map"
+import { generateMap, map as initMap, drawMap } from "./models/map"
 import { getMonster } from "./models/monsters"
 import { getItem, weightedGetItem, doEffect, effectToString } from "./models/items"
 import { capitalize, useLocalStorage } from './utils'
@@ -16,9 +16,9 @@ const actionTypes = {
   START_GAME: 'START_GAME',
   MOVE: 'MOVE', // nextID:number
   TICK: 'TICK',
-  USE_ITEM: 'USE_ITEM', // backpackSlotID:number
-  KEEP_ITEM: 'KEEP_ITEM', // backpackID (0-3, 4=loot)
-  DROP_ITEM: 'DROP_ITEM', // backpackID (0-3, 4=loot)
+  USE_ITEM: 'USE_ITEM', // backpackSlotID:number (0-3)
+  KEEP_ITEM: 'KEEP_ITEM', // backpackSlotID (0-3, 4=loot)
+  DROP_ITEM: 'DROP_ITEM', // backpackSlotID (0-3, 4=loot)
   FINISH_DROP: 'FINISH_DROP',
 };
 
@@ -49,7 +49,7 @@ const initialState = {
   backpack: [
     getItem('hamburger'),
     getItem('dagger'),
-    null,
+    getItem('shoes'),
     null,
   ],
 };
@@ -73,7 +73,7 @@ function gameStateReducer(state, action) {
           },
           backpack: [...backpack],
         };
-        console.log(nextState.map);
+        console.log(drawMap(nextState.map.nodes, 12));
 
         if (isCheat) {
           nextState.backpack[2] = {
@@ -382,17 +382,18 @@ function gameStateReducer(state, action) {
 
 function App() {
   console.log('Rerender');
-  const [playerName, setPlayerName] = useLocalStorage('dickson.md/player_name', 'Player');
-  const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/game_seed', 'LD-48');
-  const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/game_depth', 12);
-  const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/official_game', null);
-  const [url, setUrl] = useLocalStorage('dickson.md/official_game_url', null);
-  const [isCheat] = useLocalStorage('dickson.md/dev_mode', false);
+  const [playerName, setPlayerName] = useLocalStorage('dickson.md/depth-first-dungeon/player_name', 'Player');
+  const [gameSeed, setGameSeed] = useLocalStorage('dickson.md/depth-first-dungeon/game_seed', 'LD-48');
+  const [gameDepth, setGameDepth] = useLocalStorage('dickson.md/depth-first-dungeon/game_depth', 12);
+  const [officialGame, setOfficialGame] = useLocalStorage('dickson.md/depth-first-dungeon/official_game', null);
+  const [url, setUrl] = useLocalStorage('dickson.md/depth-first-dungeon/official_game_url', null);
+  const [isCheat] = useLocalStorage('dickson.md/depth-first-dungeon/dev_mode', false);
   const messagesEndRef = useRef(null);
   const scrollToBottom = () => {
     console.log('scrollToBottom');
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
+  
 
   if (url === null) {
     setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json');
@@ -457,13 +458,13 @@ function App() {
         return (
           <div className={styles.center}>
             <div>
-              <h1>Tree-Dungeon</h1>
+              <h1>Depth-First-Dungeon</h1>
               <p>
                 Venture deep into this underground dungeon and uncover the one treasure at the very bottom.
               </p>
               <div>
                 <div><label>Name: <input type="text" value={playerName} onChange={(event) => setPlayerName(event.target.value)} /></label></div>
-                <div><label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} /></label></div>
+                <div><label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} maxLength={20}/></label></div>
                 <div><label>Depth: <input type="text" value={gameDepth} onChange={(event) => setGameDepth(event.target.value)} /></label></div>
               </div>
               <p>
