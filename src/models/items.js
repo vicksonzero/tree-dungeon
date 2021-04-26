@@ -177,6 +177,23 @@ export function weightedGetItem(tier, rng) {
   }
 }
 
+export function onLeaveRoom(effectDef, nextRoomID, map, footprints) {
+  console.log(`onLeaveRoom (${effectDef.type})`);
+  const result = { footprints };
+
+  switch (effectDef.type) {
+
+    case 'footprints': {
+      result.footprints = [...footprints];
+      result.footprints.push(nextRoomID);
+    } break;
+
+    default:
+  }
+
+  return result;
+}
+
 export function doEffect(effectDef, me, them, fightLogs, backpack) {
   console.log(`doEffect (${effectDef.type})`);
   const result = { me, them, fightLogs, backpack };
@@ -235,7 +252,7 @@ export function effectToString(effectDef) {
       return `Say a message`;
     }
 
-    case 'footprint': {
+    case 'footprints': {
       return `Leave footprints on the floor`;
     }
 
