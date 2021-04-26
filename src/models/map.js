@@ -145,6 +145,7 @@ export function drawMap(nodeList, mapDepth = 2) {
 export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
     const reduce3Prongs = 0.5;
     const rng = seedrandom(seed);
+    const tutorialRooms = [0, 1];
     const result = [
         {
             index: 0,
@@ -152,8 +153,28 @@ export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
                 name: 'rat',
                 lv: 1,
             },
-            loot: { itemTier: 0 },
+            loot: { name: 'hamburger', uses: 5 },
             depth: 0,
+            next: [null, 1, null],
+        },
+        {
+            index: 1,
+            monster: {
+                name: 'rat',
+                lv: 1,
+            },
+            loot: { name: 'shoes', uses: -1 },
+            depth: 1,
+            next: [null, 2, null],
+        },
+        {
+            index: 2,
+            monster: {
+                name: 'rat',
+                lv: 1,
+            },
+            loot: { itemTier: 0 },
+            depth: 2,
             next: new Array(prongs).fill(1).map(_ => null),
         },
     ];
@@ -166,6 +187,7 @@ export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
 
         for (i = 0; i < 2000 && !hasSpaceForNext; i++) {
             randomIndex = Math.floor(rng() * result.length);
+            if (tutorialRooms.includes(randomIndex)) continue;
 
             const do3Prongs = rng() > reduce3Prongs;
             const node = result[randomIndex];
@@ -186,7 +208,7 @@ export function generateMap(seed = 'LD48', depth = 2, prongs = 3) {
 
         const newIndex = result.length;
 
-        const itemTier = Math.floor(parentNode.depth + 1 / 4);
+        const itemTier = Math.floor((parentNode.depth + 1) / 4);
         result.push({
             index: newIndex,
             monster: {

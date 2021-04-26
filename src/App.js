@@ -47,9 +47,9 @@ const initialState = {
   loot: null,
   duplicatedLoot: null,
   backpack: [
-    getItem('hamburger'),
     getItem('dagger'),
-    getItem('shoes'),
+    null,
+    null,
     null,
   ],
 };
@@ -212,6 +212,8 @@ function gameStateReducer(state, action) {
         };
         const item = { ...backpack[backpackSlotID] };
 
+        if (item.uses <= 0) return state;
+
 
         nextState.fightLogs = [...fightLogs];
         nextState.fightLogs.push(`${player.name} used "${item.name}"!`);
@@ -257,13 +259,14 @@ function gameStateReducer(state, action) {
         }
 
         if (room.loot) {
-          const { itemTier } = room.loot;
+          const { itemTier, name, uses } = room.loot;
+          console.log('itemTier', itemTier);
 
-          const newLoot = weightedGetItem(itemTier, Math.random);
+          const newLoot = (itemTier != null) ? weightedGetItem(itemTier, Math.random) : { ...getItem(name), uses };
 
           const duplicateItemIndex = backpack.findIndex(item => item && item.name === newLoot.name);
           console.log('duplicateItemIndex', newLoot.name, duplicateItemIndex, newLoot.uses);
-          if (duplicateItemIndex > -1) { // if found
+          if (newLoot.uses > 0 && duplicateItemIndex > -1) { // if found
             nextState.backpack = [...backpack];
             nextState.backpack[duplicateItemIndex] = { ...nextState.backpack[duplicateItemIndex] };
             nextState.backpack[duplicateItemIndex].uses += newLoot.uses;
@@ -393,7 +396,7 @@ function App() {
     console.log('scrollToBottom');
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
-  
+
 
   if (url === null) {
     setUrl('https://gist.githubusercontent.com/vicksonzero/18d570c8180e9c9165430cf4073a4ce2/raw/2472a3655427fa31d4b6de12154d0481c2484e7e/tree-dungeon-seed.json');
@@ -464,7 +467,7 @@ function App() {
               </p>
               <div>
                 <div><label>Name: <input type="text" value={playerName} onChange={(event) => setPlayerName(event.target.value)} /></label></div>
-                <div><label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} maxLength={20}/></label></div>
+                <div><label>Seed: <input type="text" value={gameSeed} onChange={(event) => setGameSeed(event.target.value)} maxLength={20} /></label></div>
                 <div><label>Depth: <input type="text" value={gameDepth} onChange={(event) => setGameDepth(event.target.value)} /></label></div>
               </div>
               <p>
@@ -528,20 +531,40 @@ function App() {
       case 'fight': {
         if (!monster) return <></>;
         const { name, icon, hp, maxHp } = monster;
-        const hpPercent = hp / maxHp * 100;
+        const monsterHpPercent = hp / maxHp * 100;
+        const playerHpPercent = player.hp / player.maxHp * 100;
         return (
           <>
             <h1>Encounter</h1>
+            <div className={`${styles.fightLogs}`}>
+              <ul>
+                {fightLogs.map(log => <li>{log}</li>)}
+                <div ref={messagesEndRef} />
+              </ul>
+            </div>
             <div className={styles.fightScreen}>
-              <div className={styles.fightIcon}>{icon}</div>
-              <div><h2>{capitalize(name)}</h2></div>
-              <div className={''}>HP: {Math.floor(hpPercent)}%</div>
-              <div className={`${styles.fightLogs}`}>
-                <ul>
-                  {fightLogs.map(log => <li>{log}</li>)}
-                  <div ref={messagesEndRef} />
-                </ul>
-              </div>
+              <table style={{ width: '100%' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '30%', textAlign: 'center' }}>
+                      <div className={styles.fightIcon}>{icon}</div>
+                      <h3>{capitalize(name)}</h3>
+                    </td>
+                    <td style={{ width: '70%' }}>
+                      <div className={''}>HP: {Math.floor(monsterHpPercent)}%</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '30%', textAlign: 'center' }}>
+                      <div className={styles.fightIcon}>🤠</div>
+                      <h3>{player.name}</h3>
+                    </td>
+                    <td style={{ width: '70%' }}>
+                      <div className={''}>HP: {player.hp}/{player.maxHp}</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </>
         );
@@ -551,7 +574,7 @@ function App() {
         console.log('mainScreen:item', keepBackpack);
         const lootStr = (() => {
           if (loot) {
-            return <span style={{ color: 'orange' }}>{capitalize(loot.name)} ({loot.uses < 100 ? loot.uses : '99+'})</span>
+            return <span style={{ color: 'orange' }}>{capitalize(loot.name)} ({loot.uses < 0 ? 'Equipment' : (loot.uses < 100 ? loot.uses : '99+')})</span>
           } else if (duplicatedLoot) {
             return <>
               {'another '}
@@ -601,7 +624,7 @@ function App() {
                     const isKeeping = keepBackpack.includes(lootID);
                     const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
 
-                    const usesStr = uses < 100 ? uses : '99+';
+                    const usesStr = uses < 0 ? 'Equipment' : (uses < 100 ? uses : '99+');
                     return <tr className={`${styles.dropItemRow} ${styles.dropItemRowLoot} ${dropStyle}`}>
                       <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
                         <span className={styles.itemButtonIcon}>{icon}</span><br />
@@ -628,7 +651,7 @@ function App() {
                     const isKeeping = keepBackpack.includes(i);
                     const dropStyle = isKeeping ? '' : styles.dropItemRowDrop;
 
-                    const usesStr = uses < 100 ? uses : '99+';
+                    const usesStr = uses < 0 ? 'Equipment' : (uses < 100 ? uses : '99+');
                     return <tr className={`${styles.dropItemRow} ${dropStyle}`}>
                       <td className={`${styles.dropItemCell} ${styles.dropItemIconCell}`}>
                         <span className={styles.itemButtonIcon}>{icon}</span><br />
@@ -659,12 +682,12 @@ function App() {
         return (
           <>
             <h1>
-              Choose the next room
+              Choose a hole and jump into it
             </h1>
             <div className={styles.moveChoicesContainer}>
               {room.next.map((nextID, i) => (
                 <div className={styles.moveItemButton} onClick={() => doGameAction({ type: actionTypes.MOVE, nextID, dir: i })}>
-                  {nextID ? ['Left', 'Middle', 'Right'][i] : ''}
+                  {nextID ? <>{['Left', 'Middle', 'Right'][i]}<br /><span className={styles.itemButtonIcon}>🕳️</span></> : ''}
                 </div>
               ))}
             </div>
@@ -699,7 +722,7 @@ function App() {
     }
 
     const { name, icon, uses } = item;
-    const usesStr = uses < 100 ? uses : '99+';
+    const usesStr = uses < 0 ? 'Equipment' : (uses < 100 ? uses : '99+');
     return <div
       className={`${styles.itemButton} ${buttonStateClass}`}
       onClick={() => doGameAction({ type: actionTypes.USE_ITEM, backpackSlotID: i })}

@@ -208,7 +208,6 @@ export function doEffect(effectDef, me, them, fightLogs, backpack) {
 
     case 'combine': {
       result.backpack = [...backpack];
-      
     } break;
 
     default:
@@ -234,6 +233,10 @@ export function effectToString(effectDef) {
 
     case 'echo': {
       return `Say a message`;
+    }
+
+    case 'footprint': {
+      return `Leave footprints on the floor`;
     }
 
     default:

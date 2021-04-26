@@ -43,6 +43,7 @@
   justify-content: center;
   align-items: center;
   user-select: none;
+  text-align: center;
 }
 .itemButtonEnabled:active {
   background-color: #aaa;
@@ -149,6 +150,7 @@
   user-select: none;
   border: grey 1px solid;
   box-sizing: border-box;
+  text-align: center;
 }
 .moveItemButton:active {
   background-color: rgb(255, 151, 168);
