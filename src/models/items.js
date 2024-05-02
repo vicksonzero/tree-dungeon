@@ -1,3 +1,13 @@
+/*
+
+https://sheets.googleapis.com/v4/spreadsheets/1HMo8-CXJ1Q3MNE7A0f9fAcCU4qVStaoimO4AnVdZN-g/values/monsters_table!A1%3AG30?key=AIzaSyAD6mJHZtU3ijA1eMVQl-HHuYiBLyCJaqY
+https://sheets.googleapis.com/v4/spreadsheets/1HMo8-CXJ1Q3MNE7A0f9fAcCU4qVStaoimO4AnVdZN-g/values/cards_table!A1%3AG30?key=AIzaSyAD6mJHZtU3ijA1eMVQl-HHuYiBLyCJaqY
+https://sheets.googleapis.com/v4/spreadsheets/1HMo8-CXJ1Q3MNE7A0f9fAcCU4qVStaoimO4AnVdZN-g/values/monsters!A1%3AG30?key=AIzaSyAD6mJHZtU3ijA1eMVQl-HHuYiBLyCJaqY
+https://sheets.googleapis.com/v4/spreadsheets/1HMo8-CXJ1Q3MNE7A0f9fAcCU4qVStaoimO4AnVdZN-g/values/cards!A1%3AG30?key=AIzaSyAD6mJHZtU3ijA1eMVQl-HHuYiBLyCJaqY
+https://sheets.googleapis.com/v4/spreadsheets/1HMo8-CXJ1Q3MNE7A0f9fAcCU4qVStaoimO4AnVdZN-g/values/effects!A1%3AG30?key=AIzaSyAD6mJHZtU3ijA1eMVQl-HHuYiBLyCJaqY
+
+*/
+
 const items = {
   'hamburger': {
     name: 'Hamburger',

@@ -499,6 +499,7 @@ function gameStateReducer(state, action) {
 
         return nextState;
       }
+      return state;
     }
 
     case 'move': {
